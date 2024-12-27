@@ -1,25 +1,31 @@
+import os
 import torch
 import torch.nn as nn
-from classes.classifier import CatClassifier
 import torch.optim as optim
 
+os.sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from model_classes.classifier import CatClassifier
 from utils.epoch import train_one_epoch, validate_one_epoch
 from utils.transformers import train_loader, val_loader
 
 MODEL_VERSION = open("version.txt").read().strip()
 
 
+def save_and_bump_model_version():
+    with open("version.txt", "w") as f:
+        f.write(str(int(MODEL_VERSION) + 1))
+
 def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    num_classes = 2
+    num_classes = 3
     model = CatClassifier(num_classes=num_classes).to(device)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.005, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
 
-    num_epochs = 20
+    num_epochs = 25
 
     for epoch in range(num_epochs):
         train_loss, train_acc = train_one_epoch(
@@ -43,8 +49,3 @@ def train():
 
 if __name__ == "__main__":
     train()
-
-
-def save_and_bump_model_version():
-    with open("version.txt", "w") as f:
-        f.write(str(int(MODEL_VERSION) + 1))

@@ -2,8 +2,7 @@ import torch
 from PIL import Image
 import torch.nn.functional as F
 
-def predict_single_image(model, image_path, device, transform):
-    image = Image.open(image_path).convert("RGB")
+def predict_single_image(model, image, device, transform):
     image = transform(image).unsqueeze(0)
     image = image.to(device)
 

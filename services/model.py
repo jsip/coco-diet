@@ -3,12 +3,14 @@ import time
 import torch
 from flask import Flask, request, jsonify
 from PIL import Image
-from io import BytesIO
+import tempfile
 import torchvision.transforms as T
 
 os.sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from io import BytesIO
 from utils.predict import predict_single_image
-from classes.classifier import CatClassifier
+from model_classes.classifier import CatClassifier
 
 val_transform = T.Compose([
     T.Resize((64, 64)),
@@ -27,20 +29,20 @@ checkpoint_path = f"./models/cat_classifier_{model_version}.pth"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-num_classes = 2
+num_classes = 3
 model = CatClassifier(num_classes=num_classes).to(device)
 
 try:
     state_dict = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(state_dict)
-    print(f"loaded model weights from {checkpoint_path}")
+    print(f"Loaded model weights from {checkpoint_path}")
 except FileNotFoundError:
-    print(f"model checkpoint {checkpoint_path} not found")
+    print(f"Model checkpoint {checkpoint_path} not found")
     raise SystemExit(1)
 
 model.eval()
 
-class_idx_to_name = {0: "coco", 1: "rico"}
+class_idx_to_name = {0: "coco", 1: "none", 2: "rico"}
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -51,13 +53,15 @@ def predict():
     if file.filename == "":
         return jsonify({"error": "Empty filename"}), 400
 
-    try:
-        image = Image.open(file.stream).convert("RGB")
-    except Exception as e:
-        return jsonify({"error": f"Could not read image: {e}"}), 400
+    # Read the uploaded file into memory
+    file_bytes = file.read()
+
+    # Load the image from memory
+    image = Image.open(BytesIO(file_bytes))
 
     start_time = time.time()
 
+    # Run inference
     pred_class_idx, probabilities = predict_single_image(
         model, image, device, val_transform
     )
@@ -73,7 +77,7 @@ def predict():
         },
         "inference_time": round(time.time() - start_time, 4)
     }
-
+    
     return jsonify(response)
 
 @app.route("/", methods=["GET"])
