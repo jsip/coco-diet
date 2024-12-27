@@ -11,8 +11,20 @@ SCREENSHOT_INTERVAL = 1.0
 FRAME_DURATION = 1.0 / DESIRED_FPS
 
 OUTPUT_DIR = os.path.join("images", "cam")
-PREDICT_ENDPOINT = "http://localhost:5000/predict"
+IP_ADDRESS = "192.168.2.15"
+PORT = 5000
+HEALTH_ENDPOINT = f"http://{IP_ADDRESS}:{PORT}/"
+PREDICT_ENDPOINT = f"http://{IP_ADDRESS}:{PORT}/predict"
 
+def check_model_health():
+    try:
+        response = requests.get(HEALTH_ENDPOINT, timeout=10)
+        if response.status_code == 200:
+            print("Model is healthy and ready for inference")
+        else:
+            print("Model is not healthy")
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling Docker model service health check: {e}")
 
 def ensure_output_dir_exists():
     if not os.path.exists(OUTPUT_DIR):
@@ -26,19 +38,18 @@ def run_inference_docker(image_path):
             response = requests.post(PREDICT_ENDPOINT, files=files, timeout=10)
             if response.status_code == 200:
                 data = response.json()
-                print(f"\nInterference for {image_path}:")
-                print(f"\nPredicted class: {data.get('pred_class')}")
-                print(f"\nConfidence: {data.get('confidence'):.4f}")
+                cat = data.get('pred_class')
+                print(f"\n{cat}")
 
                 probabilities = data.get("probabilities", {})
-                print("Class probabilities:")
-                for cls_name, prob_val in probabilities.items():
-                    print(f"{cls_name}: {prob_val:.4f}")
-
+                print(f"{probabilities[cat] * 100:.2f}% confidence")
                 print(f"Inference time: {data.get('inference_time')}s\n")
+                print("-----------------------------------")
+                
+                os.remove(image_path)
 
             else:
-                print("Error response from model: ", response.text)
+                print("Error response from model: ", response)
 
         except requests.exceptions.RequestException as e:
             print(f"Error calling Docker model service: {e}")
@@ -106,6 +117,7 @@ def start_camera():
 
 
 def main():
+    check_model_health()
     start_camera()
 
 
