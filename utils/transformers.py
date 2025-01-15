@@ -34,7 +34,10 @@ for label in labels:
 
 weights = torch.DoubleTensor(weights)
 
-sampler = WeightedRandomSampler(weights, num_samples=len(weights), replacement=True)
+sampler = WeightedRandomSampler(
+    weights, num_samples=len(weights), replacement=True)
 
-train_loader = DataLoader(train_dataset, batch_size=32, sampler=sampler, num_workers=2)
-val_loader = DataLoader(val_dataset,   batch_size=32, shuffle=False, num_workers=2)
+train_loader = DataLoader(train_dataset, batch_size=32,
+                          sampler=sampler, num_workers=2)
+val_loader = DataLoader(val_dataset,   batch_size=32,
+                        shuffle=False, num_workers=2)
